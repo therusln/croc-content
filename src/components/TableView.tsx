@@ -50,15 +50,25 @@ export default function TableView({ translations, setTranslations, projectId, re
 
   async function fetchTranslations() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('translations')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('key_path')
+    const all: Translation[] = []
+    const PAGE_SIZE = 1000
+    let from = 0
 
-    if (!error && data) {
-      setTranslations(data)
+    while (true) {
+      const { data, error } = await supabase
+        .from('translations')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('key_path')
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error || !data) break
+      all.push(...data)
+      if (data.length < PAGE_SIZE) break
+      from += PAGE_SIZE
     }
+
+    setTranslations(all)
     setLoading(false)
   }
 
