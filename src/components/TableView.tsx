@@ -5,6 +5,8 @@ import { analyzeKeyIssues } from '../utils/keyOptimizer'
 import { findDuplicateValues } from '../utils/duplicateDetector'
 import TableRow from './TableRow'
 
+const PAGE_SIZE = 500
+
 interface TableViewProps {
   translations: Translation[]
   setTranslations: React.Dispatch<React.SetStateAction<Translation[]>>
@@ -18,6 +20,7 @@ export default function TableView({ translations, setTranslations, projectId, re
   const [filterMode, setFilterMode] = useState<'all' | 'issues' | 'duplicates'>('all')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; translationId: string } | null>(null)
   const [ignoredDuplicates, setIgnoredDuplicates] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     fetchTranslations()
@@ -51,7 +54,7 @@ export default function TableView({ translations, setTranslations, projectId, re
   async function fetchTranslations() {
     setLoading(true)
     const all: Translation[] = []
-    const PAGE_SIZE = 1000
+    const FETCH_SIZE = 1000
     let from = 0
 
     while (true) {
@@ -60,12 +63,12 @@ export default function TableView({ translations, setTranslations, projectId, re
         .select('*')
         .eq('project_id', projectId)
         .order('key_path')
-        .range(from, from + PAGE_SIZE - 1)
+        .range(from, from + FETCH_SIZE - 1)
 
       if (error || !data) break
       all.push(...data)
-      if (data.length < PAGE_SIZE) break
-      from += PAGE_SIZE
+      if (data.length < FETCH_SIZE) break
+      from += FETCH_SIZE
     }
 
     setTranslations(all)
@@ -164,6 +167,17 @@ export default function TableView({ translations, setTranslations, projectId, re
 
     return result
   }, [translations, search, filterMode, issues, duplicateKeyPaths])
+
+  // Reset page when search or filter changes
+  useEffect(() => {
+    setPage(0)
+  }, [search, filterMode])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginatedRows = useMemo(() => {
+    const start = page * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
 
   function handleUpdate(updated: Translation) {
     setTranslations((prev) =>
@@ -295,7 +309,7 @@ export default function TableView({ translations, setTranslations, projectId, re
                   </React.Fragment>
                 ))
               ) : (
-                filtered.map((t) => (
+                paginatedRows.map((t) => (
                   <TableRow
                     key={t.id}
                     translation={t}
@@ -319,6 +333,52 @@ export default function TableView({ translations, setTranslations, projectId, re
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {filterMode !== 'duplicates' && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(0)}
+              disabled={page === 0}
+              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="px-3 py-1.5 text-xs font-medium text-gray-700">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setPage(totalPages - 1)}
+              disabled={page >= totalPages - 1}
+              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
 
       {contextMenu && (
         <div
