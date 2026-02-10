@@ -100,6 +100,16 @@ export default function TableView({ translations, setTranslations, projectId, re
     return map
   }, [activeDuplicates])
 
+  function matchesSearch(t: Translation, q: string): boolean {
+    return (
+      t.key_path.toLowerCase().includes(q) ||
+      (t.original_key?.toLowerCase().includes(q) ?? false) ||
+      (t.az_value?.toLowerCase().includes(q) ?? false) ||
+      (t.en_value?.toLowerCase().includes(q) ?? false) ||
+      (t.ru_value?.toLowerCase().includes(q) ?? false)
+    )
+  }
+
   // Grouped duplicates for the duplicates filter view
   const groupedDuplicates = useMemo(() => {
     if (filterMode !== 'duplicates') return []
@@ -117,13 +127,7 @@ export default function TableView({ translations, setTranslations, projectId, re
 
       if (search) {
         const q = search.toLowerCase()
-        rows = rows.filter(
-          (t) =>
-            t.key_path.toLowerCase().includes(q) ||
-            t.az_value?.toLowerCase().includes(q) ||
-            t.en_value?.toLowerCase().includes(q) ||
-            t.ru_value?.toLowerCase().includes(q),
-        )
+        rows = rows.filter((t) => matchesSearch(t, q))
       }
 
       return {
@@ -139,13 +143,7 @@ export default function TableView({ translations, setTranslations, projectId, re
 
     if (search) {
       const q = search.toLowerCase()
-      result = result.filter(
-        (t) =>
-          t.key_path.toLowerCase().includes(q) ||
-          t.az_value?.toLowerCase().includes(q) ||
-          t.en_value?.toLowerCase().includes(q) ||
-          t.ru_value?.toLowerCase().includes(q),
-      )
+      result = result.filter((t) => matchesSearch(t, q))
     }
 
     if (filterMode === 'issues') {
