@@ -40,9 +40,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-gray-900 mb-2">
-            Translation Manager
-          </h1>
+          <img src="/croccontent.png" alt="croc/content" className="h-10 w-auto object-contain mx-auto mb-4" />
           <p className="text-gray-500 text-sm">Enter password to continue</p>
         </div>
 
